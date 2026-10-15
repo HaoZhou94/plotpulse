@@ -1,0 +1,37 @@
+server:
+  host: 127.0.0.1
+  port: 8000
+
+logging:
+  level: INFO
+
+storage:
+  database_path: ./data/plotpulse.db
+
+worker:
+  max_workers: 1
+
+media:
+  ffprobe_bin: ffprobe
+  ffprobe_timeout_seconds: 60
+  max_video_duration_seconds: 21600
+  allow_local_media: false
+  allowed_hosts:
+    - media.example.com
+
+callback:
+  allowed_hosts:
+    - java.example.com
+  hmac_secret: ""
+  timeout_seconds: 10
+
+# Private model parameters are intentionally left empty.
+algorithms:
+  shot_detection: {}
+  audio_detection: {}
+  ocr_detection: {}
+  visual_analysis: {}
+  timeline_fusion: {}
+  semantic_analysis: {}
+  plot_segmentation: {}
+  chapter_generation: {}

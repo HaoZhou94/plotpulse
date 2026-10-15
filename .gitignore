@@ -1,0 +1,33 @@
+# Python caches and test output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local Python/Conda environments
+.conda/
+conda-env/
+.env
+.env.*
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Runtime data
+data/
+artifacts/
+logs/
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+# Machine-local configuration and secrets
+config.local.yaml
+config.*.local.yaml
