@@ -27,11 +27,25 @@ callback:
 
 # Private model parameters are intentionally left empty.
 algorithms:
-  shot_detection: {}
+  shot_detection:
+    model_path: ./models/svm.joblib
+    scaler_path: ./models/scaler.joblib
+    minimum_decode_ratio: 0.95
+    skip_start_seconds: 0
+    skip_end_seconds: 0
+    merge_window_frames: 3
+    minimum_shot_seconds: 0.3
+    open_timeout_ms: 120000
+    read_timeout_ms: 120000
   audio_detection: {}
   ocr_detection: {}
   visual_analysis: {}
   timeline_fusion: {}
   semantic_analysis: {}
+  scene_segmentation:
+    candidate_window_seconds: 3.0
+    minimum_scene_seconds: 5.0
+    speech_guard_seconds: 0.2
+    enable_music_beats: true
   plot_segmentation: {}
   chapter_generation: {}
