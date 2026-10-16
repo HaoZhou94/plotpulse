@@ -1,4 +1,4 @@
-"""One place to assemble or replace the eight algorithm stages."""
+"""One place to assemble or replace the nine algorithm stages."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from algorithms.audio_detection import AudioDetectionAlgorithm, PrivateAudioDete
 from algorithms.chapter_generation import ChapterGenerationAlgorithm, PrivateChapterGeneration
 from algorithms.ocr_detection import OCRDetectionAlgorithm, PrivateOCRDetection
 from algorithms.plot_segmentation import PlotSegmentationAlgorithm, PrivatePlotSegmentation
+from algorithms.scene_segmentation import PrivateSceneSegmentation, SceneSegmentationAlgorithm
 from algorithms.semantic_analysis import PrivateSemanticAnalysis, SemanticAnalysisAlgorithm
 from algorithms.shot_detection import PrivateShotDetection, ShotDetectionAlgorithm
 from algorithms.timeline_fusion import PrivateTimelineFusion, TimelineFusionAlgorithm
@@ -23,6 +24,7 @@ class AlgorithmRegistry:
     visual_analysis: VisualAnalysisAlgorithm
     timeline_fusion: TimelineFusionAlgorithm
     semantic_analysis: SemanticAnalysisAlgorithm
+    scene_segmentation: SceneSegmentationAlgorithm
     plot_segmentation: PlotSegmentationAlgorithm
     chapter_generation: ChapterGenerationAlgorithm
 
@@ -43,6 +45,7 @@ class AlgorithmRegistry:
             "visualAnalysis": self.visual_analysis,
             "timelineFusion": self.timeline_fusion,
             "semanticAnalysis": self.semantic_analysis,
+            "sceneSegmentation": self.scene_segmentation,
             "plotSegmentation": self.plot_segmentation,
             "chapterGeneration": self.chapter_generation,
         }
@@ -55,6 +58,7 @@ AlgorithmModuleType = (
     | VisualAnalysisAlgorithm
     | TimelineFusionAlgorithm
     | SemanticAnalysisAlgorithm
+    | SceneSegmentationAlgorithm
     | PlotSegmentationAlgorithm
     | ChapterGenerationAlgorithm
 )
@@ -71,6 +75,7 @@ def build_private_algorithms(
         visual_analysis=PrivateVisualAnalysis(configs.get("visual_analysis")),
         timeline_fusion=PrivateTimelineFusion(configs.get("timeline_fusion")),
         semantic_analysis=PrivateSemanticAnalysis(configs.get("semantic_analysis")),
+        scene_segmentation=PrivateSceneSegmentation(configs.get("scene_segmentation")),
         plot_segmentation=PrivatePlotSegmentation(configs.get("plot_segmentation")),
         chapter_generation=PrivateChapterGeneration(configs.get("chapter_generation")),
     )
@@ -83,7 +88,7 @@ def build_test_suite():
         def test_default_algorithms_are_all_unconfigured(self) -> None:
             registry = build_private_algorithms()
             self.assertFalse(registry.all_ready())
-            self.assertEqual(8, len(registry.readiness()))
+            self.assertEqual(9, len(registry.readiness()))
 
         def test_stage_config_is_injected(self) -> None:
             registry = build_private_algorithms(

@@ -74,28 +74,39 @@ class AnalysisPipeline:
             progress, cancelled,
         )
         timeline = self._stage(
-            job_id, "timeline_fusion", 62,
+            job_id, "timeline_fusion", 60,
             lambda: self.algorithms.timeline_fusion.fuse(shots, audio, ocr, visuals, options),
             progress, cancelled,
         )
         semantics = self._stage(
-            job_id, "semantic_analysis", 72,
+            job_id, "semantic_analysis", 69,
             lambda: self.algorithms.semantic_analysis.analyze(timeline, options),
             progress, cancelled,
         )
+        scene_result = self._stage(
+            job_id, "scene_segmentation", 78,
+            lambda: self.algorithms.scene_segmentation.segment(
+                timeline, semantics, metadata, options
+            ),
+            progress, cancelled,
+        )
         segments = self._stage(
-            job_id, "plot_segmentation", 82,
-            lambda: self.algorithms.plot_segmentation.segment(semantics, metadata, options),
+            job_id, "plot_segmentation", 86,
+            lambda: self.algorithms.plot_segmentation.segment(
+                scene_result.scenes, semantics, metadata, options
+            ),
             progress, cancelled,
         )
         chapters = tuple(self._stage(
-            job_id, "chapter_generation", 92,
+            job_id, "chapter_generation", 93,
             lambda: self.algorithms.chapter_generation.generate(segments, semantics, options),
             progress, cancelled,
         ))
         report = self._stage(
             job_id, "quality_validation", 97,
-            lambda: self.quality_validator.validate(metadata, chapters),
+            lambda: self.quality_validator.validate(
+                metadata, chapters, scene_result.scenes, scene_result.boundaries
+            ),
             progress, cancelled,
         )
         if not report.valid:
@@ -108,6 +119,8 @@ class AnalysisPipeline:
             metadata=metadata,
             chapters=chapters,
             quality_report=report,
+            scenes=tuple(scene_result.scenes),
+            transitions=tuple(scene_result.boundaries),
         )
 
     def _stage(
@@ -155,6 +168,7 @@ def build_test_suite():
     from algorithms.chapter_generation import ChapterGenerationAlgorithm
     from algorithms.ocr_detection import OCRDetectionAlgorithm
     from algorithms.plot_segmentation import PlotSegmentationAlgorithm
+    from algorithms.scene_segmentation import SceneSegmentationAlgorithm
     from algorithms.semantic_analysis import SemanticAnalysisAlgorithm
     from algorithms.shot_detection import ShotDetectionAlgorithm
     from algorithms.timeline_fusion import TimelineFusionAlgorithm
@@ -164,7 +178,8 @@ def build_test_suite():
     from media import MediaProbe
     from models import (
         AudioAnalysis, Chapter, MediaMetadata, OCRSegment, PlotSegment,
-        SemanticEvent, Shot, TimelineEvent, VisualEvent,
+        SceneSegment, SceneSegmentationResult, SemanticEvent, Shot,
+        TimelineEvent, TimelineFusionResult, VisualEvent,
     )
 
     class Ready:
@@ -196,14 +211,20 @@ def build_test_suite():
 
     class FakeTimeline(Ready, TimelineFusionAlgorithm):
         def fuse(self, shots, audio, ocr, visual, options):  # type: ignore[no-untyped-def]
-            return (TimelineEvent("t1", 0, 100, ("v1",)),)
+            return TimelineFusionResult((TimelineEvent("t1", 0, 100, ("v1",)),))
 
     class FakeSemantic(Ready, SemanticAnalysisAlgorithm):
         def analyze(self, timeline, options):  # type: ignore[no-untyped-def]
             return (SemanticEvent("e1", 0, 100, "topic", "summary"),)
 
+    class FakeScene(Ready, SceneSegmentationAlgorithm):
+        def segment(self, timeline, events, metadata, options):  # type: ignore[no-untyped-def]
+            return SceneSegmentationResult(
+                (SceneSegment("scene1", 0, 100, ("e1",), confidence=1.0),),
+            )
+
     class FakeSegment(Ready, PlotSegmentationAlgorithm):
-        def segment(self, events, metadata, options):  # type: ignore[no-untyped-def]
+        def segment(self, scenes, events, metadata, options):  # type: ignore[no-untyped-def]
             return (PlotSegment("p1", 0, 100, ("e1",), 1.0, 1.0),)
 
     class FakeChapter(Ready, ChapterGenerationAlgorithm):
@@ -215,7 +236,7 @@ def build_test_suite():
             settings = Settings(allowed_media_hosts=("media.example.com",))
             registry = AlgorithmRegistry(
                 FakeShot(), FakeAudio(), FakeOCR(), FakeVisual(),
-                FakeTimeline(), FakeSemantic(), FakeSegment(), FakeChapter(),
+                FakeTimeline(), FakeSemantic(), FakeScene(), FakeSegment(), FakeChapter(),
             )
             pipeline = AnalysisPipeline(
                 SourcePolicy(settings), FakeProbe(), registry,
@@ -229,6 +250,8 @@ def build_test_suite():
             )
             self.assertEqual(1, len(result.chapters))
             self.assertIn("shot_detection", progress)
+            self.assertIn("scene_segmentation", progress)
             self.assertIn("chapter_generation", progress)
+            self.assertEqual(1, len(result.scenes))
 
     return unittest.defaultTestLoader.loadTestsFromTestCase(PipelineTests)

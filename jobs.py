@@ -106,6 +106,46 @@ def result_to_dict(result: AnalysisResult) -> dict[str, Any]:
             }
             for chapter in result.chapters
         ],
+        "scenes": [
+            {
+                "id": scene.scene_id,
+                "start": scene.start,
+                "end": scene.end,
+                "semanticEventIds": list(scene.semantic_event_ids),
+                "characters": list(scene.characters),
+                "location": scene.location,
+                "timeContext": scene.time_context,
+                "entryBoundaryId": scene.entry_boundary_id,
+                "confidence": scene.confidence,
+            }
+            for scene in result.scenes
+        ],
+        "transitions": [
+            {
+                "id": transition.boundary_id,
+                "candidateWindow": [transition.window_start, transition.window_end],
+                "cutTime": transition.cut_time,
+                "reason": transition.reason,
+                "confidence": transition.confidence,
+                "scores": {
+                    "narrative": transition.scores.narrative,
+                    "dialogue": transition.scores.dialogue,
+                    "action": transition.scores.action,
+                    "audio": transition.scores.audio,
+                    "visual": transition.scores.visual,
+                    "rhythm": transition.scores.rhythm,
+                    "continuity": transition.scores.continuity,
+                    "total": transition.scores.total,
+                },
+                "detectedTransition": transition.detected_transition,
+                "recommendedVisualTransition": transition.recommended_visual_transition,
+                "recommendedAudioTransition": transition.recommended_audio_transition,
+                "outgoingAudioEnd": transition.outgoing_audio_end,
+                "incomingAudioStart": transition.incoming_audio_start,
+                "evidenceIds": list(transition.evidence_ids),
+            }
+            for transition in result.transitions
+        ],
         "qualityReport": {
             "valid": result.quality_report.valid,
             "coverage": result.quality_report.coverage,
@@ -441,5 +481,31 @@ def build_test_suite():
                 self.assertTrue(created_first)
                 self.assertFalse(created_second)
                 self.assertEqual(first.job_id, second.job_id)
+
+        def test_result_serializes_scenes_and_transitions(self) -> None:
+            from models import (
+                AnalysisResult, BoundaryScores, Chapter, MediaMetadata,
+                QualityReport, SceneBoundary, SceneSegment,
+            )
+
+            result = AnalysisResult(
+                "1.1", "0.4.0", {},
+                MediaMetadata(10, "mp4", 1920, 1080, 25, True, False),
+                (Chapter("c1", 0, 10, "标题", "摘要"),),
+                QualityReport(True, 1.0),
+                scenes=(
+                    SceneSegment("s1", 0, 5),
+                    SceneSegment("s2", 5, 10, entry_boundary_id="b1"),
+                ),
+                transitions=(
+                    SceneBoundary(
+                        "b1", 4, 6, 5, "location changed", 0.9,
+                        BoundaryScores(total=0.9), evidence_ids=("cue-1",),
+                    ),
+                ),
+            )
+            payload = result_to_dict(result)
+            self.assertEqual("s1", payload["scenes"][0]["id"])
+            self.assertEqual(5, payload["transitions"][0]["cutTime"])
 
     return unittest.defaultTestLoader.loadTestsFromTestCase(RepositoryTests)

@@ -5,13 +5,14 @@ from typing import Sequence
 
 from algorithms.base import AlgorithmModule
 from errors import AlgorithmNotConfiguredError
-from models import AnalysisOptions, MediaMetadata, PlotSegment, SemanticEvent
+from models import AnalysisOptions, MediaMetadata, PlotSegment, SceneSegment, SemanticEvent
 
 
 class PlotSegmentationAlgorithm(AlgorithmModule):
     @abstractmethod
     def segment(
         self,
+        scene_segments: Sequence[SceneSegment],
         semantic_events: Sequence[SemanticEvent],
         metadata: MediaMetadata,
         options: AnalysisOptions,
@@ -22,7 +23,7 @@ class PlotSegmentationAlgorithm(AlgorithmModule):
 class PrivatePlotSegmentation(PlotSegmentationAlgorithm):
     """Replace this method body with the private segmentation call."""
 
-    def segment(self, semantic_events, metadata, options):  # type: ignore[no-untyped-def]
+    def segment(self, scene_segments, semantic_events, metadata, options):  # type: ignore[no-untyped-def]
         raise self.not_configured()
 
 
@@ -35,6 +36,7 @@ def build_test_suite():
             self.assertFalse(algorithm.ready())
             with self.assertRaises(AlgorithmNotConfiguredError):
                 algorithm.segment(
+                    (),
                     (),
                     MediaMetadata(10, "mp4", 1920, 1080, 25, True, False),
                     AnalysisOptions(),

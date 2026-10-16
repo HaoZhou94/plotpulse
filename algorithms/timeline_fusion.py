@@ -11,6 +11,7 @@ from models import (
     OCRSegment,
     Shot,
     TimelineEvent,
+    TimelineFusionResult,
     VisualEvent,
 )
 
@@ -24,7 +25,7 @@ class TimelineFusionAlgorithm(AlgorithmModule):
         ocr_segments: Sequence[OCRSegment],
         visual_events: Sequence[VisualEvent],
         options: AnalysisOptions,
-    ) -> Sequence[TimelineEvent]:
+    ) -> TimelineFusionResult:
         raise NotImplementedError
 
 

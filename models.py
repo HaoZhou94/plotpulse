@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Mapping
 
 from errors import ValidationError
 
 
-SCHEMA_VERSION = "1.0"
-PIPELINE_VERSION = "0.3.0"
+SCHEMA_VERSION = "1.1"
+PIPELINE_VERSION = "0.4.0"
 
-
+# 视频地址和字幕地址
 @dataclass(frozen=True)
 class MediaSource:
     video_url: str
@@ -34,7 +34,7 @@ class AnalysisOptions:
         if self.spoiler_policy not in {"masked", "full"}:
             raise ValidationError("spoilerPolicy must be masked or full")
 
-
+# 时长、分辨率、帧率
 @dataclass(frozen=True)
 class MediaMetadata:
     duration_seconds: float
@@ -45,13 +45,17 @@ class MediaMetadata:
     has_audio: bool
     has_subtitle: bool
 
-
+# 镜头检测结果; frozen=True表示对象创建后不能随意修改，可以降低不同模块之间互相篡改数据的风险
 @dataclass(frozen=True)
 class Shot:
     shot_id: str
     start: float
     end: float
     confidence: float
+    # Transition used to enter this shot; the first shot has no incoming transition.
+    transition_type: str | None = None
+    # Raw SVM decision score for the incoming transition; lower means more anomalous.
+    transition_score: float | None = None
 
 
 @dataclass(frozen=True)
@@ -62,6 +66,8 @@ class TranscriptSegment:
     text: str
     speaker: str | None = None
     confidence: float | None = None
+    sentence_complete: bool | None = None
+    emotion: str | None = None
 
 
 @dataclass(frozen=True)
@@ -72,14 +78,16 @@ class AudioEvent:
     event_type: str
     description: str
     confidence: float | None = None
+    boundary_time: float | None = None
+    salience: float | None = None
 
-
+# 语音文本和音频文件
 @dataclass(frozen=True)
 class AudioAnalysis:
     transcripts: tuple[TranscriptSegment, ...] = ()
     events: tuple[AudioEvent, ...] = ()
 
-
+# 画面文字
 @dataclass(frozen=True)
 class OCRSegment:
     segment_id: str
@@ -88,7 +96,7 @@ class OCRSegment:
     text: str
     confidence: float
 
-
+# 视觉事件
 @dataclass(frozen=True)
 class VisualEvent:
     event_id: str
@@ -97,8 +105,11 @@ class VisualEvent:
     description: str
     entities: tuple[str, ...] = ()
     confidence: float | None = None
+    event_type: str | None = None
+    action_phase: str | None = None
+    location: str | None = None
 
-
+# 多模态融合结果
 @dataclass(frozen=True)
 class TimelineEvent:
     event_id: str
@@ -112,6 +123,30 @@ class TimelineEvent:
 
 
 @dataclass(frozen=True)
+class BoundaryCue:
+    """A timestamped piece of multimodal evidence for a possible scene boundary."""
+
+    cue_id: str
+    timestamp: float
+    modality: str
+    cue_type: str
+    confidence: float
+    description: str = ""
+    start: float | None = None
+    end: float | None = None
+    evidence_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class TimelineFusionResult:
+    events: tuple[TimelineEvent, ...] = ()
+    boundary_cues: tuple[BoundaryCue, ...] = ()
+
+    def __len__(self) -> int:
+        return len(self.events)
+
+# 语义事件
+@dataclass(frozen=True)
 class SemanticEvent:
     event_id: str
     start: float
@@ -121,8 +156,64 @@ class SemanticEvent:
     characters: tuple[str, ...] = ()
     location: str | None = None
     confidence: float | None = None
+    character_goal: str | None = None
+    emotion: str | None = None
+    plot_function: str | None = None
+    state_changes: tuple[str, ...] = ()
+    unresolved_questions: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class BoundaryScores:
+    narrative: float = 0.0
+    dialogue: float = 0.0
+    action: float = 0.0
+    audio: float = 0.0
+    visual: float = 0.0
+    rhythm: float = 0.0
+    continuity: float = 0.0
+    total: float = 0.0
+
+
+@dataclass(frozen=True)
+class SceneBoundary:
+    boundary_id: str
+    window_start: float
+    window_end: float
+    cut_time: float
+    reason: str
+    confidence: float
+    scores: BoundaryScores = field(default_factory=BoundaryScores)
+    detected_transition: str | None = None
+    recommended_visual_transition: str = "hard_cut"
+    recommended_audio_transition: str = "none"
+    outgoing_audio_end: float | None = None
+    incoming_audio_start: float | None = None
+    evidence_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class SceneSegment:
+    scene_id: str
+    start: float
+    end: float
+    semantic_event_ids: tuple[str, ...] = ()
+    characters: tuple[str, ...] = ()
+    location: str | None = None
+    time_context: str | None = None
+    entry_boundary_id: str | None = None
+    confidence: float | None = None
+
+
+@dataclass(frozen=True)
+class SceneSegmentationResult:
+    scenes: tuple[SceneSegment, ...] = ()
+    boundaries: tuple[SceneBoundary, ...] = ()
+
+    def __len__(self) -> int:
+        return len(self.scenes)
+
+# 剧情分段
 @dataclass(frozen=True)
 class PlotSegment:
     segment_id: str
@@ -132,7 +223,7 @@ class PlotSegment:
     importance: float
     confidence: float
 
-
+# 最终展示给观众的剧情章节
 @dataclass(frozen=True)
 class Chapter:
     chapter_id: str
@@ -156,7 +247,7 @@ class QualityReport:
     errors: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
 
-
+# 最终完整结果
 @dataclass(frozen=True)
 class AnalysisResult:
     schema_version: str
@@ -165,6 +256,8 @@ class AnalysisResult:
     metadata: MediaMetadata
     chapters: tuple[Chapter, ...]
     quality_report: QualityReport
+    scenes: tuple[SceneSegment, ...] = ()
+    transitions: tuple[SceneBoundary, ...] = ()
 
 
 class JobStatus(str, Enum):

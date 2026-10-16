@@ -5,13 +5,13 @@ from typing import Sequence
 
 from algorithms.base import AlgorithmModule
 from errors import AlgorithmNotConfiguredError
-from models import AnalysisOptions, SemanticEvent, TimelineEvent
+from models import AnalysisOptions, SemanticEvent, TimelineFusionResult
 
 
 class SemanticAnalysisAlgorithm(AlgorithmModule):
     @abstractmethod
     def analyze(
-        self, timeline: Sequence[TimelineEvent], options: AnalysisOptions
+        self, timeline: TimelineFusionResult, options: AnalysisOptions
     ) -> Sequence[SemanticEvent]:
         raise NotImplementedError
 
@@ -31,7 +31,7 @@ def build_test_suite():
             algorithm = PrivateSemanticAnalysis()
             self.assertFalse(algorithm.ready())
             with self.assertRaises(AlgorithmNotConfiguredError):
-                algorithm.analyze((), AnalysisOptions())
+                algorithm.analyze(TimelineFusionResult(), AnalysisOptions())
 
     return unittest.defaultTestLoader.loadTestsFromTestCase(SemanticAnalysisTests)
 

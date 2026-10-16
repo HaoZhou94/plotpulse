@@ -18,7 +18,7 @@ from models import AnalysisOptions, CreateJobCommand, MediaSource
 from pipeline import AnalysisPipeline
 from quality import ChapterQualityValidator
 
-
+# 负责组装所有组件
 def build_service(
     settings: Settings,
     algorithms: AlgorithmRegistry | None = None,
@@ -74,7 +74,7 @@ def create_app(settings: Settings | None = None, service: JobService | None = No
         yield
         service.shutdown()
 
-    app = FastAPI(title="PlotPulse API", version="0.3.0", lifespan=lifespan)
+    app = FastAPI(title="PlotPulse API", version="0.4.0", lifespan=lifespan)
 
     @app.exception_handler(PlotPulseError)
     async def handle_error(_, exc: PlotPulseError):  # type: ignore[no-untyped-def]

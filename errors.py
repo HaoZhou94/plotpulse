@@ -36,6 +36,12 @@ class MediaProbeError(PlotPulseError):
     http_status = 422
 
 
+class VideoReadError(PlotPulseError):
+    code = "VIDEO_READ_ERROR"
+    http_status = 422
+    retryable = True
+
+
 class QualityGateError(PlotPulseError):
     code = "QUALITY_GATE_FAILED"
     http_status = 422
